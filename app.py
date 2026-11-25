@@ -13,6 +13,14 @@ st.set_page_config(
 st.markdown(
     """
     <style>
+    .stApp {
+        background:
+            radial-gradient(ellipse at 12% 12%, rgba(255, 190, 92, 0.38) 0%, transparent 32%),
+            radial-gradient(ellipse at 88% 18%, rgba(255, 117, 168, 0.30) 0%, transparent 34%),
+            radial-gradient(ellipse at 78% 82%, rgba(85, 186, 255, 0.30) 0%, transparent 36%),
+            linear-gradient(135deg, #fff8e7 0%, #f8edff 48%, #e8f7ff 100%);
+        background-attachment: fixed;
+    }
     .big-emoji {
         font-size: 4.5rem;
         text-align: center;
