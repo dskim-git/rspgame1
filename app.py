@@ -1,4 +1,5 @@
 import random
+import pandas as pd
 import streamlit as st
 
 # 페이지 기본 설정
@@ -53,6 +54,8 @@ if "streak" not in st.session_state:
     st.session_state.streak = 0
 if "last_result" not in st.session_state:
     st.session_state.last_result = None
+if "history" not in st.session_state:
+    st.session_state.history = []
 
 # 선택지 데이터 정의
 CHOICES = {
@@ -91,6 +94,24 @@ def play_round(user_choice: str):
     else:
         st.session_state.draws += 1
 
+    # 현재까지의 누적 라운드 및 승률 계산
+    round_num = st.session_state.wins + st.session_state.losses + st.session_state.draws
+    current_win_rate = round((st.session_state.wins / round_num) * 100, 1)
+
+    # 라운드별 기록 저장 (그래프 및 표 생성용)
+    st.session_state.history.append(
+        {
+            "라운드": round_num,
+            "나": f"{CHOICES[user_choice]} {user_choice}",
+            "컴퓨터": f"{CHOICES[computer_choice]} {computer_choice}",
+            "결과": result,
+            "누적 승리": st.session_state.wins,
+            "누적 패배": st.session_state.losses,
+            "누적 무승부": st.session_state.draws,
+            "승률(%)": current_win_rate,
+        }
+    )
+
     # 최근 경기 결과 저장
     st.session_state.last_result = {
         "user": user_choice,
@@ -100,17 +121,18 @@ def play_round(user_choice: str):
 
 
 def reset_game():
-    """점수판 초기화 함수"""
+    """점수판 및 그래프 기록 초기화 함수"""
     st.session_state.wins = 0
     st.session_state.losses = 0
     st.session_state.draws = 0
     st.session_state.streak = 0
     st.session_state.last_result = None
+    st.session_state.history = []
 
 
 # 1) 화면 상단 제목
 st.title("🎮 가위바위보 챌린지")
-st.caption("컴퓨터와의 심리전! 연승 기록에 도전해 보세요 🔥")
+st.caption("컴퓨터와의 심리전! 연승 기록과 실시간 승률 그래프에 도전해 보세요 🔥")
 
 # 실시간 스코어보드
 total_games = st.session_state.wins + st.session_state.losses + st.session_state.draws
@@ -137,7 +159,7 @@ with btn_col3:
 
 st.divider()
 
-# 3~6) 선택 결과 및 승패 출력 영역
+# 3) 선택 결과 및 승패 출력 영역
 if st.session_state.last_result is not None:
     user_pick = st.session_state.last_result["user"]
     comp_pick = st.session_state.last_result["computer"]
@@ -174,7 +196,39 @@ if st.session_state.last_result is not None:
 else:
     st.info("👆 위에서 **가위, 바위, 보** 중 하나를 클릭하면 대결이 시작됩니다!")
 
-# 하단 초기화 버튼
-st.write("")
+# 4) 가위바위보 결과 그래프 및 라운드 기록 영역
 if total_games > 0:
-    st.button("🔄 기록 초기화", on_click=reset_game)
+    st.divider()
+    st.subheader("📊 대결 결과 그래프")
+
+    history_df = pd.DataFrame(st.session_state.history)
+
+    tab1, tab2, tab3 = st.tabs(["📊 승패 횟수 비교", "📈 라운드별 승률 변화", "📝 상세 기록표"])
+
+    with tab1:
+        summary_df = pd.DataFrame(
+            {
+                "결과": ["🏆 승리", "😭 패배", "🤝 무승부"],
+                "횟수": [
+                    st.session_state.wins,
+                    st.session_state.losses,
+                    st.session_state.draws,
+                ],
+            }
+        ).set_index("결과")
+        st.bar_chart(summary_df, color="#FF4B4B")
+
+    with tab2:
+        rate_df = history_df[["라운드", "승률(%)"]].set_index("라운드")
+        st.line_chart(rate_df, color="#29B5E8")
+        st.caption("라운드가 진행될수록 내 승률(%)이 어떻게 변하는지 확인할 수 있어요.")
+
+    with tab3:
+        display_df = history_df[["라운드", "나", "컴퓨터", "결과", "승률(%)"]].sort_values(
+            by="라운드", ascending=False
+        )
+        st.dataframe(display_df, use_container_width=True, hide_index=True)
+
+    # 하단 초기화 버튼
+    st.write("")
+    st.button("🔄 기록 및 그래프 초기화", on_click=reset_game)
